@@ -1,30 +1,65 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
 import 'package:tasky/main.dart';
+import 'package:tasky/utils/date_formatter.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  group('formatTaskDate', () {
+    final now = DateTime(2026, 11, 22);
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+    test('mengembalikan Hari ini, Kemarin, Besok, dan DD-MM-YYYY', () {
+      expect(formatTaskDate(DateTime(2026, 11, 22), now: now), 'Hari ini');
+      expect(formatTaskDate(DateTime(2026, 11, 21), now: now), 'Kemarin');
+      expect(formatTaskDate(DateTime(2026, 11, 23), now: now), 'Besok');
+      expect(formatTaskDate(DateTime(2026, 11, 18), now: now), '18-11-2026');
+    });
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
+  testWidgets('Menampilkan empty state saat belum ada tugas', (tester) async {
+    await tester.pumpWidget(const TaskyApp());
+
+    expect(find.text('Tasky'), findsOneWidget);
+    expect(find.text('Catatan Harian'), findsOneWidget);
+    expect(find.text('Belum ada tugas'), findsOneWidget);
+  });
+
+  testWidgets('Menolak input kosong dan menampilkan SnackBar', (tester) async {
+    await tester.pumpWidget(const TaskyApp());
+
+    await tester.tap(find.byTooltip('Tambah tugas'));
     await tester.pump();
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Judul tugas tidak boleh kosong.'), findsOneWidget);
+    expect(find.text('Belum ada tugas'), findsOneWidget);
+  });
+
+  testWidgets('Menambah, mencentang selesai, dan menghapus tugas', (
+    tester,
+  ) async {
+    await tester.pumpWidget(const TaskyApp());
+
+    // Tambah tugas baru
+    await tester.enterText(find.byType(TextField), 'Belajar Flutter');
+    await tester.tap(find.byTooltip('Tambah tugas'));
+    await tester.pump();
+
+    expect(find.text('Belajar Flutter'), findsOneWidget);
+    expect(find.text('Hari ini'), findsOneWidget);
+    expect(find.text('0 dari 1 selesai'), findsOneWidget);
+    expect(find.text('0%'), findsOneWidget);
+
+    // Tandai selesai dengan mengetuk kartu tugas
+    await tester.tap(find.text('Belajar Flutter'));
+    await tester.pump();
+
+    expect(find.text('1 dari 1 selesai'), findsOneWidget);
+    expect(find.text('100%'), findsOneWidget);
+
+    // Hapus tugas
+    await tester.tap(find.byTooltip('Hapus tugas'));
+    await tester.pump();
+
+    expect(find.text('Belajar Flutter'), findsNothing);
+    expect(find.text('Belum ada tugas'), findsOneWidget);
   });
 }
